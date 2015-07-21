@@ -109,37 +109,36 @@ namespace jsk_pcl_ros
       all_indices.push_back(indices);
       *output = *output + *super_voxel_cloud;  // append
     }
-
+   
     typedef typename boost::adjacency_list<boost::setS,
                                   boost::setS,
                                   boost::undirectedS,
                                   uint32_t, float> VoxelAdjacencyList;
-    typedef typename boost::graph_traits<
-       VoxelAdjacencyList>::vertex_iterator VertexIterator;
-    typedef typename boost::graph_traits<
-       VoxelAdjacencyList>::adjacency_iterator AdjacencyIterator;
-    typedef typename boost::property_map<
-       VoxelAdjacencyList, boost::vertex_index_t>::type IndexMap;
     
     VoxelAdjacencyList supervoxel_adjacency_list;
     super.getSupervoxelAdjacencyList(supervoxel_adjacency_list);
     
-    std::cout << "Total Vertices: " <<
-       boost::num_vertices(supervoxel_adjacency_list) << std::endl;
-
-    VertexIterator i, end;
+    VoxelAdjacencyList::vertex_iterator i, end;
     for (boost::tie(i, end) = boost::vertices(
             supervoxel_adjacency_list); i != end; i++) {
-       AdjacencyIterator ai, a_end;
+       VoxelAdjacencyList::adjacency_iterator ai, a_end;
        boost::tie(ai, a_end) = boost::adjacent_vertices(
           *i, supervoxel_adjacency_list);
-       
-       // for (; ai != a_end; ai++) {
-       //    std::cout << *ai << "\t";
-       // }
+       for (; ai != a_end; ai++) {
+          bool found = false;
+          VoxelAdjacencyList::edge_descriptor e_descriptor;
+          boost::tie(e_descriptor, found) = boost::edge(
+             *i, *ai, supervoxel_adjacency_list);
+          if (found) {
+             float weights = supervoxel_adjacency_list[e_descriptor];
+             int index = supervoxel_adjacency_list[*ai];
+             std::cout << "(" << supervoxel_adjacency_list[e_descriptor]
+                       << ", "<< index << ")\t";
+          }
+       }
        std::cout << std::endl;
     }
-    
+   
     /*
     std::multimap<uint32_t, uint32_t> label_adjacency;
     super.getSupervoxelAdjacency(label_adjacency);
@@ -170,14 +169,13 @@ namespace jsk_pcl_ros
         std::cout << "Neigbour Size: " << adjacency_list.size()
                   << "\t Cluster Indices: " << all_indices.size()
                   << "\t Voxel: " << label_adjacency.size() <<std::endl;
-    
+   
     jsk_recognition_msgs::ClusterPointIndices adjacency_indices;
     adjacency_indices.cluster_indices =
        pcl_conversions::convertToROSPointIndices(adjacency_list,
                                                  cloud_msg->header);
     adjacency_indices.header = cloud_msg->header;
     */
-    
     sensor_msgs::PointCloud2 ros_cloud;
     pcl::toROSMsg(*output, ros_cloud);
     ros_cloud.header = cloud_msg->header;
