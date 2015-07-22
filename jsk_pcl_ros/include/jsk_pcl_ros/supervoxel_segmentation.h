@@ -42,6 +42,9 @@
 #include <dynamic_reconfigure/server.h>
 #include <jsk_pcl_ros/SupervoxelSegmentationConfig.h>
 #include <jsk_recognition_msgs/ClusterPointIndices.h>
+#include <std_msgs/Int64MultiArray.h>
+#include <std_msgs/Float64MultiArray.h>
+
 namespace jsk_pcl_ros
 {
   class SupervoxelSegmentation: public jsk_topic_tools::DiagnosticNodelet
@@ -71,8 +74,9 @@ namespace jsk_pcl_ros
     boost::shared_ptr <dynamic_reconfigure::Server<Config> > srv_;
     ros::Publisher pub_indices_;
     ros::Publisher pub_cloud_;
-     ros::Publisher pub_nlist_;
-
+     ros::Publisher pub_nvertices_;
+     ros::Publisher pub_eweight_;
+     
     ////////////////////////////////////////////////////////
     // parameters
     ////////////////////////////////////////////////////////

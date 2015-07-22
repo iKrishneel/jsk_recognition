@@ -50,8 +50,10 @@ namespace jsk_pcl_ros
       *pnh_, "output/indices", 1);
     pub_cloud_ = advertise<sensor_msgs::PointCloud2>(
       *pnh_, "output/cloud", 1);
-    pub_nlist_ = advertise<jsk_recognition_msgs::ClusterPointIndices>(
-      *pnh_, "output/adjacent_list", 1);
+    pub_nvertices_ = advertise<std_msgs::Int64MultiArray>(
+      *pnh_, "output/adjacent_voxels", 1);
+    pub_eweight_ = advertise<std_msgs::Float64MultiArray>(
+       *pnh_, "output/adjacent_voxels_distance", 1);
   }
 
   void SupervoxelSegmentation::subscribe()
@@ -109,73 +111,39 @@ namespace jsk_pcl_ros
       all_indices.push_back(indices);
       *output = *output + *super_voxel_cloud;  // append
     }
-   
+    std_msgs::Int64MultiArray vertices_neigbour;
+    std_msgs::Float64MultiArray edge_weight;
     typedef typename boost::adjacency_list<boost::setS,
                                   boost::setS,
                                   boost::undirectedS,
                                   uint32_t, float> VoxelAdjacencyList;
-    
     VoxelAdjacencyList supervoxel_adjacency_list;
     super.getSupervoxelAdjacencyList(supervoxel_adjacency_list);
-    
     VoxelAdjacencyList::vertex_iterator i, end;
     for (boost::tie(i, end) = boost::vertices(
             supervoxel_adjacency_list); i != end; i++) {
        VoxelAdjacencyList::adjacency_iterator ai, a_end;
        boost::tie(ai, a_end) = boost::adjacent_vertices(
           *i, supervoxel_adjacency_list);
+       vertices_neigbour.data.push_back(static_cast<int>(
+                                           supervoxel_adjacency_list[*i]));
+       edge_weight.data.push_back(-1.0f);
        for (; ai != a_end; ai++) {
           bool found = false;
           VoxelAdjacencyList::edge_descriptor e_descriptor;
           boost::tie(e_descriptor, found) = boost::edge(
              *i, *ai, supervoxel_adjacency_list);
           if (found) {
-             float weights = supervoxel_adjacency_list[e_descriptor];
-             int index = supervoxel_adjacency_list[*ai];
-             std::cout << "(" << supervoxel_adjacency_list[e_descriptor]
-                       << ", "<< index << ")\t";
+             float weight = supervoxel_adjacency_list[e_descriptor];
+             int n_index = supervoxel_adjacency_list[*ai];
+             vertices_neigbour.data.push_back(n_index);
+             edge_weight.data.push_back(weight);
           }
        }
-       std::cout << std::endl;
+       vertices_neigbour.data.push_back(-1);
+       edge_weight.data.push_back(-1.0f);
     }
-   
-    /*
-    std::multimap<uint32_t, uint32_t> label_adjacency;
-    super.getSupervoxelAdjacency(label_adjacency);
     
-    std::vector<pcl::PointIndices> adjacency_list;
-    int max_count = 0;
-    int previous_index = -1;
-    for (std::multimap<uint32_t, uint32_t>::iterator
-           it = label_adjacency.begin();
-        it != label_adjacency.end();
-        ++it) {
-       // std::cout << it->first << "\t" << it->second << std::endl;
-       if (previous_index != it->first) {
-          std::pair<std::multimap<uint32_t, uint32_t>::iterator,
-                    std::multimap<uint32_t, uint32_t>::iterator> ret;
-          ret = label_adjacency.equal_range(it->first);
-          pcl::PointIndices indices;
-          indices.indices.push_back(it->first);
-          for (std::multimap<uint32_t, uint32_t>::iterator itr = ret.first;
-               itr != ret.second; ++itr) {
-             indices.indices.push_back(itr->second);
-          }
-          adjacency_list.push_back(indices);
-          previous_index = it->first;
-       }
-    }
-    std::cout << "MAX COUNT: " << max_count << std::endl;
-        std::cout << "Neigbour Size: " << adjacency_list.size()
-                  << "\t Cluster Indices: " << all_indices.size()
-                  << "\t Voxel: " << label_adjacency.size() <<std::endl;
-   
-    jsk_recognition_msgs::ClusterPointIndices adjacency_indices;
-    adjacency_indices.cluster_indices =
-       pcl_conversions::convertToROSPointIndices(adjacency_list,
-                                                 cloud_msg->header);
-    adjacency_indices.header = cloud_msg->header;
-    */
     sensor_msgs::PointCloud2 ros_cloud;
     pcl::toROSMsg(*output, ros_cloud);
     ros_cloud.header = cloud_msg->header;
@@ -184,9 +152,10 @@ namespace jsk_pcl_ros
       all_indices,
       cloud_msg->header);
     ros_indices.header = cloud_msg->header;
+    pub_nvertices_.publish(vertices_neigbour);
+    pub_eweight_.publish(edge_weight);
     pub_cloud_.publish(ros_cloud);
     pub_indices_.publish(ros_indices);
-    // pub_nlist_.publish(adjacency_indices);
   }
 
   void SupervoxelSegmentation::configCallback (Config &config, uint32_t level)
