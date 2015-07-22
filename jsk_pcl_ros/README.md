@@ -1357,7 +1357,12 @@ This nodelet tracks the target pointcloud.
 
 * `~renew_model` (`sensor_msgs/PointCloud2`)
 
-  Reference pointcloud to tracke.
+  Reference pointcloud to track.
+
+* `~renew_model_with_marker` (`visualization_msgs/Marker`)
+
+  Reference marker model to track. This will convert marker model to pointcloud.
+  You need to pass the marker whose type is TRIANGLE_LIST and it should have the color.
 
 * `~renew_box` (`jsk_recognition_msgs/BoundingBox`)
 
@@ -1656,6 +1661,9 @@ You can choose several types of tilt/spindle lasers such as tilt-laser of PR2, i
    Clear cache and restart collecting data.
 
 #### Parameters
+* `~clear_assembled_scans` (Bool, default: `false`)
+
+   Do not use assembled scans twice.
 * `~skip_number` (Integer, default: `1`):
 
    Skip publishing and calling laser assembler per `~skip_number`.
