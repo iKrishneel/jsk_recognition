@@ -42,6 +42,7 @@ add_message_files(
   Line.msg
   ICPResult.msg
   ImageDifferenceValue.msg
+  AdjacencyList.msg
   )
 
 generate_messages(

@@ -50,10 +50,8 @@ namespace jsk_pcl_ros
       *pnh_, "output/indices", 1);
     pub_cloud_ = advertise<sensor_msgs::PointCloud2>(
       *pnh_, "output/cloud", 1);
-    pub_nvertices_ = advertise<std_msgs::Int64MultiArray>(
-      *pnh_, "output/adjacent_voxels", 1);
-    pub_eweight_ = advertise<std_msgs::Float64MultiArray>(
-       *pnh_, "output/adjacent_voxels_distance", 1);
+    pub_adj_list_ = advertise<jsk_recognition_msgs::AdjacencyList>(
+      *pnh_, "output/adjacency_list", 1);
   }
 
   void SupervoxelSegmentation::subscribe()
@@ -111,8 +109,7 @@ namespace jsk_pcl_ros
       all_indices.push_back(indices);
       *output = *output + *super_voxel_cloud;  // append
     }
-    std_msgs::Int64MultiArray vertices_neigbour;
-    std_msgs::Float64MultiArray edge_weight;
+    jsk_recognition_msgs::AdjacencyList super_list;
     typedef typename boost::adjacency_list<boost::setS,
                                   boost::setS,
                                   boost::undirectedS,
@@ -125,9 +122,9 @@ namespace jsk_pcl_ros
        VoxelAdjacencyList::adjacency_iterator ai, a_end;
        boost::tie(ai, a_end) = boost::adjacent_vertices(
           *i, supervoxel_adjacency_list);
-       vertices_neigbour.data.push_back(static_cast<int>(
+       super_list.vertices.push_back(static_cast<int>(
                                            supervoxel_adjacency_list[*i]));
-       edge_weight.data.push_back(-1.0f);
+       super_list.edge_weight.push_back(-1.0f);
        for (; ai != a_end; ai++) {
           bool found = false;
           VoxelAdjacencyList::edge_descriptor e_descriptor;
@@ -136,14 +133,14 @@ namespace jsk_pcl_ros
           if (found) {
              float weight = supervoxel_adjacency_list[e_descriptor];
              int n_index = supervoxel_adjacency_list[*ai];
-             vertices_neigbour.data.push_back(n_index);
-             edge_weight.data.push_back(weight);
+             super_list.vertices.push_back(n_index);
+             super_list.edge_weight.push_back(weight);
           }
        }
-       vertices_neigbour.data.push_back(-1);
-       edge_weight.data.push_back(-1.0f);
+       super_list.vertices.push_back(-1);
+       super_list.edge_weight.push_back(-1.0f);
     }
-    
+    super_list.header = cloud_msg->header;
     sensor_msgs::PointCloud2 ros_cloud;
     pcl::toROSMsg(*output, ros_cloud);
     ros_cloud.header = cloud_msg->header;
@@ -152,8 +149,7 @@ namespace jsk_pcl_ros
       all_indices,
       cloud_msg->header);
     ros_indices.header = cloud_msg->header;
-    pub_nvertices_.publish(vertices_neigbour);
-    pub_eweight_.publish(edge_weight);
+    pub_adj_list_.publish(super_list);
     pub_cloud_.publish(ros_cloud);
     pub_indices_.publish(ros_indices);
   }
