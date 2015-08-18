@@ -252,6 +252,9 @@ namespace jsk_pcl_ros
     ParticleXYZRPY result = tracker_get_result();
     Eigen::Affine3f transformation = tracker_to_eigen_matrix(result);
 
+    std::cout << "Pose: " << result << std::endl;
+    std::cout << "Transformation: \n" << transformation.matrix() << std::endl;
+    
     //Publisher object transformation
     tf::Transform tfTransformation;
     tf::transformEigenToTF((Eigen::Affine3d) transformation, tfTransformation);
@@ -268,6 +271,11 @@ namespace jsk_pcl_ros
     result_pose_stamped.header.stamp = stamp_;
     tf::Quaternion q;
     tf::poseTFToMsg(tfTransformation, result_pose_stamped.pose);
+
+    result_pose_stamped.pose.orientation.x = result.roll;
+    result_pose_stamped.pose.orientation.y = result.pitch;
+    result_pose_stamped.pose.orientation.z = result.yaw;
+    
     pose_stamped_publisher_.publish(result_pose_stamped);
     //Publish model reference point cloud
     pcl::PointCloud<PointT>::Ptr result_cloud
