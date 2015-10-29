@@ -50,6 +50,8 @@ namespace jsk_pcl_ros
       *pnh_, "output/indices", 1);
     pub_cloud_ = advertise<sensor_msgs::PointCloud2>(
       *pnh_, "output/cloud", 1);
+    pub_normal_ = advertise<sensor_msgs::PointCloud2>(
+       *pnh_, "output/normal", 1);
   }
 
   void SupervoxelSegmentation::subscribe()
@@ -92,6 +94,7 @@ namespace jsk_pcl_ros
     std::map<uint32_t, pcl::Supervoxel<PointT>::Ptr > supervoxel_clusters;
     super.extract(supervoxel_clusters);
     pcl::PointCloud<PointT>::Ptr output (new pcl::PointCloud<PointT>);
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     std::vector<pcl::PointIndices> all_indices;
     for (std::map<uint32_t, pcl::Supervoxel<PointT>::Ptr >::iterator
            it = supervoxel_clusters.begin();
@@ -105,7 +108,8 @@ namespace jsk_pcl_ros
         indices.indices.push_back(i + output->points.size());
       }
       all_indices.push_back(indices);
-      *output = *output + *super_voxel_cloud; // append
+      *output = *output + *super_voxel_cloud;  // append
+      *normals = *normals + *(super_voxel->normals_);  // append normals
     }
     sensor_msgs::PointCloud2 ros_cloud;
     pcl::toROSMsg(*output, ros_cloud);
@@ -115,8 +119,12 @@ namespace jsk_pcl_ros
       all_indices,
       cloud_msg->header);
     ros_indices.header = cloud_msg->header;
+    sensor_msgs::PointCloud2 ros_normal;
+    pcl::toROSMsg(*normals, ros_normal);
+    ros_normal.header = cloud_msg->header;
     pub_cloud_.publish(ros_cloud);
     pub_indices_.publish(ros_indices);
+    pub_normal_.publish(ros_normal);
   }
 
   void SupervoxelSegmentation::configCallback (Config &config, uint32_t level)

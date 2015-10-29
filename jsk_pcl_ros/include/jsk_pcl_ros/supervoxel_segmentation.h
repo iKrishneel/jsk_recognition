@@ -71,6 +71,7 @@ namespace jsk_pcl_ros
     boost::shared_ptr <dynamic_reconfigure::Server<Config> > srv_;
     ros::Publisher pub_indices_;
     ros::Publisher pub_cloud_;
+     ros::Publisher pub_normal_;
 
     ////////////////////////////////////////////////////////
     // parameters
